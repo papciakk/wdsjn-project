@@ -1,14 +1,11 @@
 # coding=utf-8
+import pickle
+import re
+from operator import itemgetter
+
 import morfeusz2
 
-import re
-from collections import defaultdict
-from operator import itemgetter
-from pprint import pprint
-
-import pickle
-
-from data_utils import read_words
+from basic_forms.data_utils import read_words
 
 morfeusz = morfeusz2.Morfeusz(dict_name="polimorf")
 
