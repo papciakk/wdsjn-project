@@ -2,14 +2,15 @@ import os
 import pickle
 from collections import defaultdict
 from operator import itemgetter
+from pprint import pprint
 
 from algorithm.timer import Timer
 
 stimuli_words = ["kwiat", "liść", "łodyga", "roślina"]
 
-Hij_search_range = 12
+Hij_search_ranges = [8]
 
-alphas = [0.33, 0.66]
+alphas = [0.66]
 betas = [2e-5]
 gammas = betas
 
@@ -24,33 +25,37 @@ def run():
 
     stimuli_word_ids = get_stimuli_word_ids(dict)
 
-    with Timer("compute H(j) and H(i&j)"):
-        Hj, Hij = compute_Hj_and_Hij(stimuli_word_ids, text)
-
     with Timer("compute r(i, j) for given parameters"):
-        compute_r_ij_for_given_parameters(Hij, Hj, rdict, stimuli_word_ids, text)
+        compute_r_ij_for_given_parameters(rdict, stimuli_word_ids, text)
 
 
-def compute_r_ij_for_given_parameters(Hij, Hj, rdict, stimuli_word_ids, text):
-    for _alpha in alphas:
-        for _beta in betas:
-            for _gamma in gammas:
-                r_ij = compute_r_ij(Hij, Hj,
-                                    stimuli_word_ids, text,
-                                    _alpha, _beta, _gamma)
+def compute_r_ij_for_given_parameters(rdict, stimuli_word_ids, text):
+    for Hij_search_range in Hij_search_ranges:
 
-                save_results(_alpha, _beta, _gamma, r_ij, rdict)
+        with Timer("compute H(j) and H(i&j), range={}".format(Hij_search_range)):
+            Hj, Hij = compute_Hj_and_Hij(stimuli_word_ids, text, Hij_search_range)
+
+        for _alpha in alphas:
+            for _beta in betas:
+                for _gamma in gammas:
+                    r_ij = compute_r_ij(Hij, Hj,
+                                        stimuli_word_ids, text,
+                                        _alpha, _beta, _gamma)
+
+                    save_results(_alpha, _beta, _gamma, r_ij, rdict, Hij_search_range)
 
 
-def save_results(_alpha, _beta, _gamma, r_ij, rdict):
+def save_results(_alpha, _beta, _gamma, r_ij, rdict, Hij_search_range):
     os.makedirs("results/", exist_ok=True)
 
     for stimuli_word_id, r_ij_vals in r_ij.items():
         stimuli_word = rdict[stimuli_word_id]
 
+        result = []
+
         os.makedirs("results/{}".format(stimuli_word), exist_ok=True)
-        filename = "results/{}/α{:.2f}_β{:.5f}_γ{:.5f}.txt" \
-            .format(stimuli_word, _alpha, _beta, _gamma)
+        filename = "results/{}/range{:}_α{:.2f}_β{:.5f}_γ{:.5f}.txt" \
+            .format(stimuli_word, Hij_search_range, _alpha, _beta, _gamma)
 
         with open(filename, "w", encoding="utf8") as f:
             print("--------------------------------", file=f)
@@ -60,6 +65,10 @@ def save_results(_alpha, _beta, _gamma, r_ij, rdict):
             for (word_id, val) in r_ij_vals[:top_collocations]:
                 if word_id != stimuli_word_id:
                     print("{}\t{:.4f}".format(rdict[word_id], val), file=f)
+                    result.append((rdict[word_id], val))
+
+        print(stimuli_word, "------------------------")
+        pprint(result)
 
 
 def load_data(pickle_fn):
@@ -91,7 +100,7 @@ def compute_r_ij(Hij, Hj, stimuli_word_ids, text, alpha, beta, gamma):
     return r_ij
 
 
-def compute_Hj_and_Hij(stimuli_word_ids, text):
+def compute_Hj_and_Hij(stimuli_word_ids, text, Hij_search_range):
     Hij = defaultdict(int)
     Hj = defaultdict(int)
 
