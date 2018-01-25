@@ -1,12 +1,13 @@
 import csv
+import os
 
 import numpy as np
 
-stimuli_words = ["lisc", "kwiat", "lodyga", "roslina"]
+stimuli_words = ["liść", "kwiat", "łodyga", "roślina"]
 
 
-def compare(stimuli, comparator):
-    with open("to_compare/{}.txt".format(stimuli), "r", encoding="utf8") as result_f:
+def compare(stimuli, current_result_dir, comparator):
+    with open("{}/{}.txt".format(current_result_dir, stimuli), "r", encoding="utf8") as result_f:
         with open("../data/stimuli/{}.csv".format(stimuli), "r", encoding="utf8") as reference_f:
             reference_data = prepare_reference_data(reference_f)
             result_data = prepare_result_data(result_f)
@@ -18,7 +19,7 @@ def compare(stimuli, comparator):
 
 def basic_comparator(reference_data, result_data, compare_count=25):
     vector = {}
-    for reference_data_item in reference_data[:compare_count]:
+    for reference_data_item in reference_data:
         words_ref = reference_data_item[0]
         val_ref = reference_data_item[1]
 
@@ -26,7 +27,12 @@ def basic_comparator(reference_data, result_data, compare_count=25):
             word_res = result_dat_item[0]
             val_res = result_dat_item[1]
 
-            vector[word_res] = val_ref - val_res if word_res in words_ref else val_res
+            if word_res in words_ref:
+                vector[word_res] = val_res - val_ref
+                break
+            else:
+                vector[word_res] = val_res
+
     length = np.sqrt(np.sum(v ** 2 for v in vector.values()))
     return length
 
@@ -41,10 +47,12 @@ def position_comparator(reference_data, result_data, compare_count=25):
             words_ref = reference_data_item[0]
 
             if word_res in words_ref:
-                vector[word_res] = np.abs(position_ref-position_res)
+                vector[word_res] = position_ref - position_res
                 break
+            else:
+                vector[word_res] = len(reference_data)
 
-    length = np.sqrt(np.sum(v ** 2 for v in vector.values()))/len(reference_data)
+    length = np.sqrt(np.sum(v ** 2 for v in vector.values())) / len(reference_data)
     return length
 
 
@@ -76,12 +84,25 @@ def prepare_reference_data(reference_f):
     return [(words, float(val) / max_val) for (val, words) in reference_data]
 
 
-def run():
-    comparator = position_comparator
+result_data_path = "../data/results"
+comparator = position_comparator
+# comparator = basic_comparator
 
-    for stimuli in stimuli_words:
-        length = compare(stimuli, comparator=comparator)
-        print("{}: {:.3f}".format(stimuli, length))
+
+def run():
+    folders = os.listdir(result_data_path)
+
+    for name in folders:
+        current_result_dir = result_data_path + "/" + name
+
+        print(name)
+
+        for stimuli in stimuli_words:
+            length = compare(stimuli, current_result_dir, comparator=comparator)
+            # print("{}: {:.3f}".format(stimuli, length))
+            print("{:.3f}".format(length))
+
+        print()
 
 
 run()

@@ -7,20 +7,24 @@ from algorithm.timer import Timer
 
 stimuli_words = ["kwiat", "liść", "łodyga", "roślina"]
 
-Hij_search_ranges = [4, 8, 10, 12]
+Hij_search_ranges = [1, 2, 4, 6, 8, 10, 12, 14, 16]
 
 alphas = [0.33, 0.66]
 betas = [2e-5]
-gammas = betas
+gammas = [2e-5]
 
 top_collocations = 100
+
+preprocessed_data_path = "../data/preprocessed"
+results_data_path = "../data/results"
 
 
 def run():
     with Timer("load data"):
-        dict = load_data("dict.pickle")
-        rdict = load_data("rdict.pickle")
-        text = load_data("filtered_text.pickle")
+        dict = load_data(preprocessed_data_path + "/dict.pickle")
+        rdict = load_data(preprocessed_data_path + "/rdict.pickle")
+        text = load_data(preprocessed_data_path + "/filtered_text.pickle")
+        print(len(text))
 
     stimuli_word_ids = get_stimuli_word_ids(dict)
 
@@ -45,17 +49,17 @@ def compute_r_ij_for_given_parameters(rdict, stimuli_word_ids, text):
 
 
 def save_results(_alpha, _beta, _gamma, r_ij, rdict, Hij_search_range):
-    os.makedirs("results/", exist_ok=True)
+    os.makedirs(results_data_path, exist_ok=True)
 
     for stimuli_word_id, r_ij_vals in r_ij.items():
         stimuli_word = rdict[stimuli_word_id]
 
+        path = "{}/{:}_α{:.2f}_β{:.5f}_γ{:.5f}" \
+            .format(results_data_path, Hij_search_range, _alpha, _beta, _gamma)
+        os.makedirs(path, exist_ok=True)
+        filename = "{}/{}.txt".format(path, stimuli_word)
+
         result = []
-
-        os.makedirs("results/{}".format(stimuli_word), exist_ok=True)
-        filename = "results/{}/range{:}_α{:.2f}_β{:.5f}_γ{:.5f}.txt" \
-            .format(stimuli_word, Hij_search_range, _alpha, _beta, _gamma)
-
         with open(filename, "w", encoding="utf8") as f:
             for (word_id, val) in r_ij_vals[:top_collocations]:
                 if word_id != stimuli_word_id:
